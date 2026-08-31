@@ -1,0 +1,23 @@
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Dependencies (in case any tooling gets added later)
+node_modules/
+
+# Secrets — never commit these
+.env
+.env.*
+*.key
+*.pem
