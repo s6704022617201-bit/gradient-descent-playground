@@ -2,7 +2,7 @@
 
 เครื่องมือแสดงภาพการทำงานของ Gradient Descent แบบ 1 มิติ ให้เห็นว่าลูกบอลไหลลงไปหาจุดต่ำสุดของฟังก์ชันอย่างไร
 
-🔗 **Demo:** _(ใส่ลิงก์ GitHub Pages ตรงนี้)_
+🔗 **Demo:** https://s6704022617201-bit.github.io/gradient-descent-playground/
 
 ## แอปนี้ทำอะไร
 
