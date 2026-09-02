@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent Playground</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Noto Sans Thai", system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+
+  .stage {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+
+  .readout { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .stat {
+    flex: 1 1 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .stat .v { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  label.fn { display: block; margin-bottom: 6px; cursor: pointer; }
+  input[type=range] { width: 100%; }
+
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    background: #21262d; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #04121f; border-color: var(--accent); font-weight: 600; }
+
+  .warn {
+    display: none;
+    background: #4a1d1d; border: 1px solid #a04141; color: #ffb3b3;
+    border-radius: 6px; padding: 8px 12px; margin-top: 10px; font-size: 14px;
+  }
+  .warn.show { display: block; }
+
+  .note {
+    display: none;
+    background: #12261a; border: 1px solid #2ea043; color: #7ee2a8;
+    border-radius: 6px; padding: 8px 12px; margin-top: 10px; font-size: 14px;
+  }
+  .note.show { display: block; }
+
+  .howto { font-size: 14px; color: var(--muted); }
+  .howto ul { margin: 6px 0 0; padding-left: 18px; }
+  .howto b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gradient Descent Playground</h1>
+  <p class="sub">ดูว่า learning rate มีผลต่อการลู่เข้าอย่างไร โดยไม่ต้องอ่านแต่สูตร</p>
+
+  <div class="stage">
+    <canvas id="cv" tabindex="0" role="img"
+            aria-label="กราฟของฟังก์ชันเป้าหมาย พร้อมจุดปัจจุบันและเส้นทางที่ gradient descent เดินผ่าน ใช้ลูกศรซ้ายขวาย้ายจุดเริ่มต้น เคาะ spacebar เพื่อเดินทีละสเต็ป"></canvas>
+    <div class="note" id="note"></div>
+    <div class="warn" id="warn">ค่าลู่ออก (diverged) — learning rate ใหญ่เกินไป กด Reset แล้วลองค่าน้อยลง</div>
+    <div class="readout">
+      <div class="stat"><div class="k">x</div><div class="v" id="rx">0.000</div></div>
+      <div class="stat"><div class="k">f(x)</div><div class="v" id="rfx">0.000</div></div>
+      <div class="stat"><div class="k">learning rate</div><div class="v" id="rlr">0.100</div></div>
+      <div class="stat"><div class="k">steps</div><div class="v" id="rn">0</div></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="card">
+      <h2>ฟังก์ชันเป้าหมาย</h2>
+      <label class="fn"><input type="radio" name="fn" value="0" checked> f(x) = x²</label>
+      <label class="fn"><input type="radio" name="fn" value="1"> f(x) = x⁴ − 3x² + 1</label>
+      <label class="fn"><input type="radio" name="fn" value="2"> f(x) = x² + 3·sin(2x)</label>
+    </div>
+
+    <div class="card">
+      <h2>Learning rate (log scale)</h2>
+      <input type="range" id="lr" min="0" max="1" step="0.00001" value="0.605872"
+             aria-label="Learning rate">
+      <div class="btns" style="margin-top:10px">
+        <button data-lr="0.01">0.01 เล็กไป</button>
+        <button data-lr="0.1">0.1 กำลังดี</button>
+        <button data-lr="1.05">1.05 ใหญ่ไป</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ควบคุม</h2>
+      <div class="btns">
+        <button id="bStep">Step</button>
+        <button id="bRun" class="primary">Run</button>
+        <button id="bReset">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card howto" style="margin-top:16px">
+    <h2>วิธีใช้</h2>
+    <p style="margin:0">Gradient descent เดินลงเขาทีละก้าวด้วยสูตร <b>x ← x − lr · f'(x)</b> — ความชัน f'(x) บอกทิศ ส่วน learning rate บอกว่าก้าวยาวแค่ไหน</p>
+    <ul>
+      <li><b>ลากบนกราฟ</b> เพื่อย้ายจุดเริ่มต้น</li>
+      <li><b>Step</b> เดินทีละก้าว / <b>Run</b> เดินต่อเนื่อง / <b>Reset</b> เริ่มใหม่</li>
+      <li><b>ลูกศร ซ้าย ขวา</b> ขยับจุดเริ่มต้น, <b>Spacebar</b> = Step, <b>R</b> = Reset</li>
+      <li>เส้นเขียวคือ <b>เส้นสัมผัส</b> ยิ่งชันแปลว่า gradient ยิ่งแรง ก้าวถัดไปยิ่งไกล</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ---------- ส่วนคำนวณ (math) ----------
+const FUNCS = [
+  { name: "x^2",           f: x => x * x,                       df: x => 2 * x,                     xmin: -3,   xmax: 3   },
+  { name: "x^4-3x^2+1",    f: x => x**4 - 3 * x**2 + 1,         df: x => 4 * x**3 - 6 * x,          xmin: -2.2, xmax: 2.2 },
+  { name: "x^2+3sin(2x)",  f: x => x * x + 3 * Math.sin(2 * x), df: x => 2 * x + 6 * Math.cos(2*x), xmin: -4,   xmax: 4   }
+];
+
+// slider 0..1 -> learning rate 0.001..2 แบบ log scale
+const LR_MIN = 0.001, LR_MAX = 2;
+function sliderToLr(t) {
+  return LR_MIN * Math.pow(LR_MAX / LR_MIN, t);
+}
+function lrToSlider(lr) {
+  return Math.log(lr / LR_MIN) / Math.log(LR_MAX / LR_MIN);
+}
+
+// จุดที่ความชันเป็น 0 เรียกว่า "จุดวิกฤต" (stationary point) ซึ่งอาจเป็นจุดต่ำสุด
+// จุดสูงสุด หรือจุดอานม้าก็ได้ gradient descent แยกสามอย่างนี้ไม่ออกด้วยตัวเอง
+// จึงต้องชิมค่า f ทั้งสองข้างเพื่อจำแนกก่อนจะประกาศว่าเจอคำตอบ
+const GRAD_EPS  = 1e-7;   // ถือว่าความชันเป็นศูนย์
+const PROBE     = 1e-3;   // ระยะที่ชิมค่าซ้าย-ขวา
+const MAX_STEPS = 1000;   // เพดานจำนวนสเต็ปของโหมด Run
+
+// ปัดทศนิยมแล้วกันไม่ให้ได้ "-0.0000" ซึ่งไม่มีความหมายทางคณิตศาสตร์
+// (เกิดเมื่อค่าจริงเป็นลบจิ๋ว ๆ เช่น -4.4e-8 แล้วถูกปัดขึ้นเป็นศูนย์)
+function fmt(v, digits) {
+  const rounded = Number(v.toFixed(digits));
+  return (rounded === 0 ? 0 : rounded).toFixed(digits);
+}
+
+function classifyStationary(fn, x) {
+  const f0 = fn.f(x), fL = fn.f(x - PROBE), fR = fn.f(x + PROBE);
+  if (fL > f0 && fR > f0) return "min";    // ต่ำกว่าทั้งสองข้าง = จุดต่ำสุดจริง
+  if (fL < f0 && fR < f0) return "max";    // สูงกว่าทั้งสองข้าง = จุดสูงสุด
+  return "saddle";                          // ข้างหนึ่งขึ้นข้างหนึ่งลง = จุดอานม้า
+}
+
+const state = {
+  fnIndex: 0,
+  lr: 0.1,
+  x0: -2.0,
+  x: -2.0,
+  steps: 0,
+  path: [],
+  running: false,
+  diverged: false,
+  settled: false,      // ถึงจุดต่ำสุดแล้ว ไม่ต้องเดินต่อ
+  status: "",
+  reason: ""
+};
+
+function currentFn() { return FUNCS[state.fnIndex]; }
+
+// เดินหน้า 1 สเต็ป: x_new = x_old - lr * f'(x_old)
+function stepOnce() {
+  // ถึงคำตอบแล้วหรือลู่ออกแล้วก็ไม่ต้องเดินต่อ ไม่งั้นตัวนับสเต็ปจะพองขึ้นเรื่อย ๆ
+  // ทั้งที่ค่า x ไม่ได้ขยับจริง ซึ่งทำให้ตัวเลขที่แอปนี้ตั้งใจจะสอนเชื่อถือไม่ได้
+  if (state.diverged || state.settled) return;
+  const fn = currentFn();
+  const prev = state.x;
+  const grad = fn.df(state.x);
+  const next = state.x - state.lr * grad;
+
+  if (!isFinite(next)) {
+    state.diverged = true;
+    state.running = false;
+    state.reason = "ค่ากลายเป็น Infinity หรือ NaN";
+    state.status = "";   // ล้างข้อความเดิม ไม่ให้โชว์คู่กับคำเตือนจนขัดแย้งกันเอง
+    return;
+  }
+
+  state.x = next;
+  state.steps++;
+  state.path.push(next);
+
+  // ลู่ออก: ออกนอกกรอบกราฟแล้วและก้าวถัดไปยิ่งไกลกว่าเดิม
+  // ไม่ต้องรอให้ถึง 1e6 เพราะกว่าจะถึงลูกบอลก็หายจากจอไปนานแล้ว
+  if ((next < fn.xmin || next > fn.xmax) && Math.abs(next) > Math.abs(prev)) {
+    state.diverged = true;
+    state.running = false;
+    state.reason = "x = " + next.toFixed(2) + " หลุดออกนอกกรอบกราฟ (" +
+                   fn.xmin + " ถึง " + fn.xmax + ") และก้าวถัดไปยิ่งไกลกว่าเดิม";
+    state.status = "";
+    return;
+  }
+
+  // ความชันเกือบศูนย์ = ถึงจุดวิกฤต แต่ยังไม่รู้ว่าเป็นจุดต่ำสุดหรือเปล่า ต้องจำแนกก่อน
+  if (Math.abs(fn.df(state.x)) < GRAD_EPS) {
+    const kind = classifyStationary(fn, state.x);
+    if (kind === "min") {
+      state.running = false;
+      state.settled = true;
+      state.status = "พบจุดต่ำสุด: x = " + fmt(state.x, 4) + ", f(x) = " + fmt(fn.f(state.x), 4);
+    } else {
+      // ความชันเป็นศูนย์แต่ไม่ใช่คำตอบ สะกิดออกไปทางที่ค่า f ต่ำกว่าแล้วเดินต่อ
+      const goLeft = fn.f(state.x - PROBE) < fn.f(state.x + PROBE);
+      state.x += goLeft ? -PROBE : PROBE;
+      // การสะกิดเป็นส่วนหนึ่งของก้าวเดิม ไม่ใช่ก้าวใหม่ จึงเขียนทับจุดล่าสุด
+      // ไม่ใช่ push เพิ่ม ไม่งั้น path จะยาวเกินจำนวนสเต็ปจริง
+      state.path[state.path.length - 1] = state.x;
+      state.status = (kind === "max" ? "จุดสูงสุดเฉพาะที่" : "จุดอานม้า") +
+        " (ความชัน = 0 แต่ไม่ใช่จุดต่ำสุด) กำลังเดินต่อ";
+    }
+  } else if (state.steps >= MAX_STEPS) {
+    // ยังไม่ถึงจุดต่ำสุดแต่เดินครบเพดานแล้ว — บอกผู้ใช้แทนที่จะวิ่งไปเรื่อย ๆ
+    state.running = false;
+    state.status = "เดินครบ " + MAX_STEPS + " สเต็ปแล้วยังไม่ถึงจุดต่ำสุด (ความชันยังเป็น " +
+                   fn.df(state.x).toExponential(2) + ") — learning rate เล็กเกินไป";
+  } else if (state.running) {
+    state.status = "กำลังเดิน... สเต็ปที่ " + state.steps + "  ความชัน = " + grad.toExponential(2);
+  } else {
+    state.status = "";
+  }
+}
+
+// จุดเริ่มต้นต้องอยู่ในช่วง x ที่วาดอยู่เสมอ ไม่งั้นลูกบอลถูกวาดนอกจอ
+// และ Reset ก็กู้ไม่ได้ เพราะ reset() ดึงค่ากลับไปที่ x0 ตัวที่หลุดขอบอยู่ดี
+function clampStart() {
+  const fn = currentFn();
+  state.x0 = Math.max(fn.xmin, Math.min(fn.xmax, state.x0));
+}
+
+function reset() {
+  clampStart();
+  state.x = state.x0;
+  state.steps = 0;
+  state.path = [state.x0];
+  state.running = false;
+  state.diverged = false;
+  state.settled = false;
+  state.status = "";
+  state.reason = "";
+}
+
+// ---------- การวาด (render) ----------
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0;
+
+function resize() {
+  const cssW = cv.clientWidth;
+  const cssH = Math.max(260, Math.round(cssW * 0.5));
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.height = cssH + "px";
+  cv.width  = Math.round(cssW * dpr);
+  cv.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  W = cssW; H = cssH;
+  draw();
+}
+
+// แปลงพิกัดคณิตศาสตร์ -> พิกัด canvas (แกน y ของ canvas ชี้ลง จึงต้องกลับด้าน)
+function view() {
+  const fn = currentFn();
+  const xmin = fn.xmin, xmax = fn.xmax;
+  let ymin = Infinity, ymax = -Infinity;
+  for (let i = 0; i <= 200; i++) {
+    const x = xmin + (xmax - xmin) * i / 200;
+    const y = fn.f(x);
+    if (y < ymin) ymin = y;
+    if (y > ymax) ymax = y;
+  }
+  const pad = (ymax - ymin) * 0.15 || 1;
+  return { xmin, xmax, ymin: ymin - pad, ymax: ymax + pad };
+}
+
+function toPx(v, x, y) {
+  return [
+    (x - v.xmin) / (v.xmax - v.xmin) * W,
+    H - (y - v.ymin) / (v.ymax - v.ymin) * H
+  ];
+}
+function pxToMathX(v, px) {
+  return v.xmin + px / W * (v.xmax - v.xmin);
+}
+
+function draw() {
+  const fn = currentFn();
+  const v = view();
+  ctx.clearRect(0, 0, W, H);
+
+  // แกน
+  ctx.strokeStyle = "#30363d";
+  ctx.lineWidth = 1;
+  const origin = toPx(v, 0, 0);
+  ctx.beginPath();
+  ctx.moveTo(0, origin[1]); ctx.lineTo(W, origin[1]);
+  ctx.moveTo(origin[0], 0); ctx.lineTo(origin[0], H);
+  ctx.stroke();
+
+  // เส้นโค้งของฟังก์ชัน
+  ctx.strokeStyle = "#58a6ff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 400; i++) {
+    const x = v.xmin + (v.xmax - v.xmin) * i / 400;
+    const p = toPx(v, x, fn.f(x));
+    if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+  }
+  ctx.stroke();
+
+  // เส้นทางที่เดินผ่านมา
+  ctx.strokeStyle = "#d29922";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  state.path.forEach((x, i) => {
+    const p = toPx(v, x, fn.f(x));
+    if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+  });
+  ctx.stroke();
+  ctx.fillStyle = "#d29922";
+  state.path.forEach(x => {
+    const p = toPx(v, x, fn.f(x));
+    ctx.beginPath(); ctx.arc(p[0], p[1], 2.5, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // เส้นสัมผัสที่จุดปัจจุบัน
+  const slope = fn.df(state.x);
+  const half = (v.xmax - v.xmin) * 0.18;
+  const xa = state.x - half, xb = state.x + half;
+  const ya = fn.f(state.x) + slope * (xa - state.x);
+  const yb = fn.f(state.x) + slope * (xb - state.x);
+  ctx.strokeStyle = "#3fb950";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const a = toPx(v, xa, ya);
+  const b = toPx(v, xb, yb);
+  ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+  ctx.stroke();
+
+  // ลูกบอล
+  const c = toPx(v, state.x, fn.f(state.x));
+  ctx.fillStyle = "#f78166";
+  ctx.beginPath(); ctx.arc(c[0], c[1], 7, 0, Math.PI * 2); ctx.fill();
+
+  updateReadout();
+}
+
+function updateReadout() {
+  const fn = currentFn();
+  document.getElementById("rx").textContent  = fmt(state.x, 3);
+  document.getElementById("rfx").textContent = fmt(fn.f(state.x), 3);
+  // lr ต่ำ ๆ ต้องการทศนิยมมากกว่า ไม่งั้น 0.001 กับ 0.009 อ่านออกมาเหมือนกันหมด
+  document.getElementById("rlr").textContent =
+    state.lr < 0.01 ? state.lr.toFixed(5) : state.lr.toFixed(3);
+  document.getElementById("rn").textContent  = state.steps;
+  const warn = document.getElementById("warn");
+  warn.textContent = "ค่าลู่ออก (diverged) — learning rate ใหญ่เกินไป" +
+                     (state.reason ? ": " + state.reason : "") + " กด Reset แล้วลองค่าน้อยลง";
+  warn.classList.toggle("show", state.diverged);
+  const note = document.getElementById("note");
+  note.textContent = state.status;
+  note.classList.toggle("show", state.status !== "");
+}
+
+// ---------- การจัดการ event ----------
+document.querySelectorAll('input[name=fn]').forEach(el => {
+  el.addEventListener("change", () => {
+    state.fnIndex = parseInt(el.value, 10);
+    reset();
+    draw();
+  });
+});
+
+const lrSlider = document.getElementById("lr");
+lrSlider.value = lrToSlider(state.lr);
+lrSlider.addEventListener("input", () => {
+  state.lr = sliderToLr(parseFloat(lrSlider.value));
+  updateReadout();
+});
+
+document.querySelectorAll("button[data-lr]").forEach(b => {
+  b.addEventListener("click", () => {
+    state.lr = parseFloat(b.dataset.lr);
+    lrSlider.value = lrToSlider(state.lr);
+    reset();
+    draw();
+  });
+});
+
+document.getElementById("bStep").addEventListener("click", () => { stepOnce(); draw(); });
+document.getElementById("bReset").addEventListener("click", () => { reset(); draw(); });
+
+const runBtn = document.getElementById("bRun");
+runBtn.addEventListener("click", () => {
+  // ลู่ออกหรือถึงคำตอบแล้ว กด Run ไม่ควรทำอะไร ไม่งั้นปุ่มค้างที่ "Pause" ตลอดไป
+  if (state.diverged || state.settled) return;
+  state.running = !state.running;
+  runBtn.textContent = state.running ? "Pause" : "Run";
+});
+
+function loop() {
+  if (state.running) { stepOnce(); draw(); }
+  if (!state.running) runBtn.textContent = "Run";
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ลากบน canvas เพื่อย้ายจุดเริ่มต้น
+let dragging = false;
+function setStartFromEvent(e) {
+  const rect = cv.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const v = view();
+  state.x0 = Math.max(v.xmin, Math.min(v.xmax, pxToMathX(v, px)));
+  reset();
+  draw();
+}
+cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); setStartFromEvent(e); });
+cv.addEventListener("pointermove", e => { if (dragging) setStartFromEvent(e); });
+cv.addEventListener("pointerup",   e => { dragging = false; });
+
+// คีย์บอร์ด
+window.addEventListener("keydown", e => {
+  // ตัวควบคุมที่โฟกัสอยู่ต้องได้จัดการคีย์ของตัวเองก่อนเสมอ
+  // ถ้าไม่กันไว้ ลูกศรจะถูกแย่งไปจาก slider และ radio จนใช้คีย์บอร์ดปรับค่าไม่ได้เลย
+  const tag = e.target && e.target.tagName;
+  if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA") return;
+
+  // ไม่แตะคีย์ลัดของเบราว์เซอร์ (Ctrl+R ฯลฯ)
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const v = view();
+  const nudge = (v.xmax - v.xmin) / 100;
+  if (e.key === "ArrowLeft")  { state.x0 -= nudge; reset(); draw(); e.preventDefault(); }
+  if (e.key === "ArrowRight") { state.x0 += nudge; reset(); draw(); e.preventDefault(); }
+  if (e.key === " ")          { stepOnce(); draw(); e.preventDefault(); }
+  if (e.key === "r" || e.key === "R") { reset(); draw(); }
+});
+
+window.addEventListener("resize", resize);
+reset();
+resize();
+</script>
+</body>
+</html>
