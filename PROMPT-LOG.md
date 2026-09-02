@@ -226,6 +226,7 @@ agent รายงานมา 8 ข้อ พอเอามาตรวจก�
 - [x] มีคำอธิบายวิธีใช้งานแสดงอยู่ในหน้าเว็บจริง ไม่ใช่แค่ใน README
 - [x] Prompt Log มีครบทั้ง 4 ส่วน (A–D)
 - [x] มีบันทึกการปรับแก้อย่างน้อย 5 รอบ และมีรอบ debug อย่างน้อย 1 รอบ
-- [ ] ตั้งสิทธิ์ Google Doc เป็น "ผู้ที่มีลิงก์ = ผู้อ่าน" แล้วลองเปิดลิงก์ใน Incognito เพื่อยืนยัน
+- [x] ตั้งสิทธิ์ Google Doc เป็น "ผู้ที่มีลิงก์ = ผู้อ่าน" แล้วลองเปิดลิงก์ใน Incognito เพื่อยืนยัน — ตรวจผ่าน Drive API ได้ `{"role":"reader","type":"anyone"}` เจ้าของ kimkim3317738@gmail.com
+  Doc: https://docs.google.com/document/d/180By5hEEuDsZgW1258KKIV2_tG8usuqsPuU2i2drV_o/edit
 - [x] GitHub repo ตั้งเป็น Public และไม่มี API key หรือข้อมูลลับใด ๆ อยู่ในโค้ด
 - [ ] ส่งครบทั้ง 3 ลิงก์ (แอปที่ deploy แล้ว / Google Doc "Prompt Log" / GitHub repo) ใน Google Classroom
