@@ -2,1075 +2,487 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gradient Descent Playground</title>
 <style>
-  :root{
-    --bg:#0a0e16;
-    --panel:#131a26;
-    --panel2:#0e1420;
-    --line:#243046;
-    --txt:#e6edf7;
-    --dim:#8b97ab;
-    --accent:#4da3ff;
-    --ball:#ff5a78;
-    --tan:#78ffbe;
-    --warn:#ffb454;
-    --ok:#4ade80;
-    --font-th:'Noto Sans Thai','Sarabun','Leelawadee UI','Thonburi','Segoe UI',system-ui,-apple-system,sans-serif;
-    --font-mono:'Cascadia Mono','Consolas','SFMono-Regular','Menlo','Roboto Mono','Courier New',monospace;
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
   }
-
-  *{box-sizing:border-box}
-
-  html,body{margin:0;padding:0}
-
-  body{
-    background:var(--bg);
-    color:var(--txt);
-    font-family:var(--font-th);
-    font-size:15px;
-    line-height:1.65;
-    -webkit-text-size-adjust:100%;
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Noto Sans Thai", system-ui, sans-serif;
+    line-height: 1.6;
   }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
 
-  .wrap{
-    max-width:900px;
-    margin:0 auto;
-    padding:20px 14px 48px;
+  .stage {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
   }
+  canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; }
 
-  header{margin-bottom:16px}
-
-  h1{
-    font-size:21px;
-    margin:0 0 4px;
-    letter-spacing:-.2px;
+  .readout { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .stat {
+    flex: 1 1 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
   }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .stat .v { font-size: 18px; font-variant-numeric: tabular-nums; }
 
-  .sub{
-    color:var(--dim);
-    font-size:13.5px;
-    margin:0;
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
   }
-
-  .card{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:12px;
-    margin-bottom:12px;
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
   }
+  .card h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 
-  /* ---------- canvas ---------- */
+  label.fn { display: block; margin-bottom: 6px; cursor: pointer; }
+  input[type=range] { width: 100%; }
 
-  .canvas-wrap{
-    position:relative;
-    width:100%;
-    aspect-ratio:16/9;
-    min-height:230px;
-    max-height:56vh;
-    background:var(--panel2);
-    border:1px solid var(--line);
-    border-radius:10px;
-    overflow:hidden;
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    background: #21262d; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer;
+    font-family: inherit;
   }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #04121f; border-color: var(--accent); font-weight: 600; }
 
-  canvas{
-    display:block;
-    width:100%;
-    height:100%;
-    touch-action:none;   /* กันหน้าเว็บเลื่อนตอนลากนิ้วบนกราฟ */
-    cursor:crosshair;
+  .warn {
+    display: none;
+    background: #4a1d1d; border: 1px solid #a04141; color: #ffb3b3;
+    border-radius: 6px; padding: 8px 12px; margin-top: 10px; font-size: 14px;
   }
+  .warn.show { display: block; }
 
-  /* ---------- banner ---------- */
-
-  #banner{
-    display:none;
-    margin-top:10px;
-    padding:9px 12px;
-    border-radius:9px;
-    font-size:13.5px;
-    font-weight:600;
-    border:1px solid transparent;
+  .note {
+    display: none;
+    background: #12261a; border: 1px solid #2ea043; color: #7ee2a8;
+    border-radius: 6px; padding: 8px 12px; margin-top: 10px; font-size: 14px;
   }
+  .note.show { display: block; }
 
-  #banner.show{display:block}
-
-  #banner.bad{
-    background:rgba(255,90,120,.13);
-    border-color:rgba(255,90,120,.45);
-    color:#ffa6b6;
-  }
-
-  #banner.good{
-    background:rgba(74,222,128,.12);
-    border-color:rgba(74,222,128,.4);
-    color:#8ef0b0;
-  }
-
-  #banner.warn{
-    background:rgba(255,180,84,.12);
-    border-color:rgba(255,180,84,.4);
-    color:#ffd08a;
-  }
-
-  #banner .hint{
-    display:block;
-    font-weight:400;
-    font-size:12.5px;
-    opacity:.85;
-    margin-top:2px;
-  }
-
-  /* ---------- controls ---------- */
-
-  .row{margin-bottom:12px}
-  .row:last-child{margin-bottom:0}
-
-  label.lbl{
-    display:block;
-    font-size:12.5px;
-    color:var(--dim);
-    margin-bottom:5px;
-    letter-spacing:.2px;
-  }
-
-  select{
-    width:100%;
-    background:var(--panel2);
-    color:var(--txt);
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:9px 10px;
-    font-family:var(--font-th);
-    font-size:14.5px;
-  }
-
-  select:focus-visible,
-  button:focus-visible,
-  input:focus-visible{
-    outline:2px solid var(--accent);
-    outline-offset:2px;
-  }
-
-  .lr-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    gap:8px;
-    margin-bottom:5px;
-  }
-
-  .lr-head span:first-child{
-    font-size:12.5px;
-    color:var(--dim);
-  }
-
-  #lrVal{
-    font-family:var(--font-mono);
-    font-size:15px;
-    color:var(--accent);
-    font-variant-numeric:tabular-nums;
-  }
-
-  input[type=range]{
-    width:100%;
-    accent-color:var(--accent);
-    height:26px;
-    margin:0;
-  }
-
-  .scale{
-    display:flex;
-    justify-content:space-between;
-    font-family:var(--font-mono);
-    font-size:11px;
-    color:var(--dim);
-    margin-top:-2px;
-  }
-
-  .grid3{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:8px;
-  }
-
-  button{
-    font-family:var(--font-th);
-    background:var(--panel2);
-    color:var(--txt);
-    border:1px solid var(--line);
-    border-radius:9px;
-    padding:9px 6px;
-    font-size:14px;
-    cursor:pointer;
-    transition:background .12s,border-color .12s,opacity .12s;
-  }
-
-  button:hover:not(:disabled){
-    background:#1a2436;
-    border-color:#33415c;
-  }
-
-  button:active:not(:disabled){transform:translateY(1px)}
-
-  button:disabled{
-    opacity:.38;
-    cursor:not-allowed;
-  }
-
-  .preset{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:1px;
-    line-height:1.25;
-    padding:7px 4px;
-  }
-
-  .preset b{
-    font-family:var(--font-mono);
-    font-size:14.5px;
-    color:var(--accent);
-    font-weight:700;
-  }
-
-  .preset span{
-    font-size:11.5px;
-    color:var(--dim);
-  }
-
-  .preset.active{
-    border-color:var(--accent);
-    background:rgba(77,163,255,.12);
-  }
-
-  #btnRun{
-    background:rgba(77,163,255,.16);
-    border-color:rgba(77,163,255,.5);
-    font-weight:600;
-  }
-
-  #btnRun:hover:not(:disabled){background:rgba(77,163,255,.26)}
-
-  /* ---------- stats ---------- */
-
-  .stats{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:8px;
-  }
-
-  .stat{
-    background:var(--panel2);
-    border:1px solid var(--line);
-    border-radius:9px;
-    padding:8px 6px;
-    text-align:center;
-    min-width:0;
-  }
-
-  .stat .k{
-    display:block;
-    font-size:11px;
-    color:var(--dim);
-    margin-bottom:2px;
-    white-space:nowrap;
-  }
-
-  .stat .v{
-    display:block;
-    font-family:var(--font-mono);
-    font-size:14px;
-    font-variant-numeric:tabular-nums;
-    letter-spacing:-.3px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-
-  .stat.pos .v{color:var(--ball)}
-  .stat.grad .v{color:var(--tan)}
-
-  /* ---------- legend + help ---------- */
-
-  .legend{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px 14px;
-    font-size:12.5px;
-    color:var(--dim);
-    margin-top:10px;
-  }
-
-  .legend i{
-    display:inline-block;
-    width:11px;
-    height:11px;
-    border-radius:50%;
-    margin-right:5px;
-    vertical-align:-1px;
-  }
-
-  .help h2{
-    font-size:15.5px;
-    margin:0 0 8px;
-  }
-
-  .help h3{
-    font-size:13.5px;
-    margin:14px 0 5px;
-    color:var(--accent);
-  }
-
-  .help p{margin:0 0 8px;font-size:13.5px;color:#c6d2e4}
-
-  .help ul{margin:0;padding-left:20px;font-size:13.5px;color:#c6d2e4}
-
-  .help li{margin-bottom:3px}
-
-  code,kbd{
-    font-family:var(--font-mono);
-    background:var(--panel2);
-    border:1px solid var(--line);
-    border-radius:5px;
-    padding:1px 5px;
-    font-size:12.5px;
-  }
-
-  .formula{
-    display:block;
-    text-align:center;
-    font-family:var(--font-mono);
-    font-size:16px;
-    color:var(--tan);
-    background:var(--panel2);
-    border:1px solid var(--line);
-    border-radius:9px;
-    padding:11px;
-    margin:10px 0;
-  }
-
-  .tip{
-    background:rgba(255,180,84,.09);
-    border:1px solid rgba(255,180,84,.3);
-    border-radius:9px;
-    padding:9px 11px;
-    font-size:13px;
-    color:#ffd08a;
-    margin-top:12px;
-  }
-
-  footer{
-    text-align:center;
-    color:var(--dim);
-    font-size:12px;
-    margin-top:22px;
-  }
-
-  @media (max-width:380px){
-    .stats{grid-template-columns:repeat(2,1fr)}
-    h1{font-size:19px}
-  }
+  .howto { font-size: 14px; color: var(--muted); }
+  .howto ul { margin: 6px 0 0; padding-left: 18px; }
+  .howto b { color: var(--text); }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <h1>Gradient Descent Playground</h1>
+  <p class="sub">ดูว่า learning rate มีผลต่อการลู่เข้าอย่างไร โดยไม่ต้องอ่านแต่สูตร</p>
 
-  <header>
-    <h1>Gradient Descent Playground</h1>
-    <p class="sub">ดูว่า “ลูกบอล” ไหลลงหาจุดต่ำสุดอย่างไร และจะเกิดอะไรขึ้นเมื่อ learning rate ใหญ่เกินไป</p>
-  </header>
-
-  <div class="card">
-    <div class="canvas-wrap">
-      <canvas id="plot"></canvas>
-    </div>
-
-    <div id="banner" role="status" aria-live="polite"></div>
-
-    <div class="legend">
-      <span><i style="background:#4da3ff"></i>เส้นโค้ง f(x)</span>
-      <span><i style="background:#ff5a78"></i>ตำแหน่งปัจจุบัน</span>
-      <span><i style="background:#78ffbe"></i>เส้นสัมผัส (ความชัน)</span>
-      <span><i style="background:#ffb454"></i>เส้นทางที่ผ่านมา</span>
+  <div class="stage">
+    <canvas id="cv" tabindex="0" role="img"
+            aria-label="กราฟของฟังก์ชันเป้าหมาย พร้อมจุดปัจจุบันและเส้นทางที่ gradient descent เดินผ่าน ใช้ลูกศรซ้ายขวาย้ายจุดเริ่มต้น เคาะ spacebar เพื่อเดินทีละสเต็ป"></canvas>
+    <div class="note" id="note"></div>
+    <div class="warn" id="warn">ค่าลู่ออก (diverged) — learning rate ใหญ่เกินไป กด Reset แล้วลองค่าน้อยลง</div>
+    <div class="readout">
+      <div class="stat"><div class="k">x</div><div class="v" id="rx">0.000</div></div>
+      <div class="stat"><div class="k">f(x)</div><div class="v" id="rfx">0.000</div></div>
+      <div class="stat"><div class="k">learning rate</div><div class="v" id="rlr">0.100</div></div>
+      <div class="stat"><div class="k">steps</div><div class="v" id="rn">0</div></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="row">
-      <label class="lbl" for="fnSelect">ฟังก์ชันที่จะหาจุดต่ำสุด</label>
-      <select id="fnSelect"></select>
+  <div class="controls">
+    <div class="card">
+      <h2>ฟังก์ชันเป้าหมาย</h2>
+      <label class="fn"><input type="radio" name="fn" value="0" checked> f(x) = x²</label>
+      <label class="fn"><input type="radio" name="fn" value="1"> f(x) = x⁴ − 3x² + 1</label>
+      <label class="fn"><input type="radio" name="fn" value="2"> f(x) = x² + 3·sin(2x)</label>
     </div>
 
-    <div class="row">
-      <div class="lr-head">
-        <span>Learning rate (ขนาดก้าว)</span>
-        <span id="lrVal">0.100</span>
-      </div>
-      <input type="range" id="lrSlider" min="-3" max="0.1" step="0.01" value="-1"
+    <div class="card">
+      <h2>Learning rate (log scale)</h2>
+      <input type="range" id="lr" min="0" max="1" step="0.00001" value="0.605872"
              aria-label="Learning rate">
-      <div class="scale"><span>0.001</span><span>0.03</span><span>1.26</span></div>
+      <div class="btns" style="margin-top:10px">
+        <button data-lr="0.01">0.01 เล็กไป</button>
+        <button data-lr="0.1">0.1 กำลังดี</button>
+        <button data-lr="1.05">1.05 ใหญ่ไป</button>
+      </div>
     </div>
 
-    <div class="row grid3">
-      <button class="preset" data-lr="0.01"><b>0.01</b><span>เล็กไป</span></button>
-      <button class="preset" data-lr="0.1"><b>0.1</b><span>กำลังดี</span></button>
-      <button class="preset" data-lr="1.05"><b>1.05</b><span>ใหญ่ไป</span></button>
-    </div>
-
-    <div class="row grid3">
-      <button id="btnStep">Step</button>
-      <button id="btnRun">Run</button>
-      <button id="btnReset">Reset</button>
+    <div class="card">
+      <h2>ควบคุม</h2>
+      <div class="btns">
+        <button id="bStep">Step</button>
+        <button id="bRun" class="primary">Run</button>
+        <button id="bReset">Reset</button>
+      </div>
     </div>
   </div>
 
-  <div class="card stats">
-    <div class="stat"><span class="k">รอบที่</span><span class="v" id="sIter">0</span></div>
-    <div class="stat pos"><span class="k">x</span><span class="v" id="sX">0.0000</span></div>
-    <div class="stat"><span class="k">f(x)</span><span class="v" id="sFx">0.0000</span></div>
-    <div class="stat grad"><span class="k">f′(x)</span><span class="v" id="sDfx">0.0000</span></div>
-  </div>
-
-  <div class="card help">
-    <h2>Gradient descent คืออะไร</h2>
-    <p>
-      เป็นวิธีหา “จุดต่ำสุด” ของฟังก์ชัน โดยไม่ต้องแก้สมการ — แค่ยืนอยู่ตรงไหนสักที่
-      แล้วเดินลงตามความชันทีละก้าว ทำซ้ำไปเรื่อย ๆ ก้าวแต่ละก้าวคำนวณจากสูตรนี้
-    </p>
-
-    <span class="formula">x ← x − lr · f′(x)</span>
-
-    <p>
-      <code>f′(x)</code> คือความชัน ณ จุดที่ยืนอยู่ (เส้นสีเขียวในกราฟ) ส่วน
-      <code>lr</code> คือ learning rate ที่บอกว่าจะก้าวยาวแค่ไหน — ตัวนี้แหละที่เป็นหัวใจ
-    </p>
-
-    <h3>วิธีใช้</h3>
+  <div class="card howto" style="margin-top:16px">
+    <h2>วิธีใช้</h2>
+    <p style="margin:0">Gradient descent เดินลงเขาทีละก้าวด้วยสูตร <b>x ← x − lr · f'(x)</b> — ความชัน f'(x) บอกทิศ ส่วน learning rate บอกว่าก้าวยาวแค่ไหน</p>
     <ul>
-      <li>เลือกฟังก์ชัน แล้วปรับ learning rate ด้วยแถบเลื่อนหรือปุ่ม preset</li>
-      <li>กด <b>Step</b> เพื่อเดินทีละก้าว หรือ <b>Run</b> ให้เดินเองอัตโนมัติ</li>
-      <li><b>คลิกหรือลากบนกราฟ</b> เพื่อย้ายจุดเริ่มต้นไปที่อื่น</li>
-      <li>คีย์ลัด: <kbd>←</kbd> <kbd>→</kbd> เลื่อนจุดเริ่มต้น · <kbd>Space</kbd> เดิน 1 ก้าว · <kbd>R</kbd> เริ่มใหม่</li>
-    </ul>
-
-    <div class="tip">
-      💡 <b>ลองกดปุ่ม “1.05 ใหญ่ไป” แล้วกด Run ดู</b> — ลูกบอลจะไม่ไหลลง แต่จะกระเด้งออกไกลขึ้นเรื่อย ๆ
-      จนหลุดจอ นี่ไม่ใช่บั๊ก แต่คือสิ่งที่เกิดขึ้นจริงเมื่อ learning rate ใหญ่เกินไป เรียกว่า
-      <i>diverge</i> (ลู่ออก) แล้วลองเทียบกับ “0.01 เล็กไป” ที่ถูกต้องแต่ช้ามากจนน่าหงุดหงิด
-    </div>
-
-    <h3>ลองสังเกตดู</h3>
-    <ul>
-      <li>ฟังก์ชัน <code>x⁴ − 3x² + 1</code> มีจุดต่ำสุด 2 จุด — เริ่มจากคนละฝั่งจะได้คำตอบคนละอัน</li>
-      <li>ฟังก์ชัน <code>x² + 3·sin(2x)</code> ขรุขระ ติด <i>local minimum</i> ง่ายมาก</li>
-      <li>ยิ่งใกล้จุดต่ำสุด ความชันยิ่งน้อย ก้าวก็ยิ่งสั้นลงเอง โดยไม่ต้องสั่ง</li>
+      <li><b>ลากบนกราฟ</b> เพื่อย้ายจุดเริ่มต้น</li>
+      <li><b>Step</b> เดินทีละก้าว / <b>Run</b> เดินต่อเนื่อง / <b>Reset</b> เริ่มใหม่</li>
+      <li><b>ลูกศร ซ้าย ขวา</b> ขยับจุดเริ่มต้น, <b>Spacebar</b> = Step, <b>R</b> = Reset</li>
+      <li>เส้นเขียวคือ <b>เส้นสัมผัส</b> ยิ่งชันแปลว่า gradient ยิ่งแรง ก้าวถัดไปยิ่งไกล</li>
     </ul>
   </div>
-
-  <footer>สร้างด้วย HTML/CSS/JavaScript ล้วน · ไม่ใช้ library ภายนอก</footer>
-
 </div>
 
 <script>
-(function () {
-  'use strict';
+// ---------- ส่วนคำนวณ (math) ----------
+const FUNCS = [
+  { name: "x^2",           f: x => x * x,                       df: x => 2 * x,                     xmin: -3,   xmax: 3   },
+  { name: "x^4-3x^2+1",    f: x => x**4 - 3 * x**2 + 1,         df: x => 4 * x**3 - 6 * x,          xmin: -2.2, xmax: 2.2 },
+  { name: "x^2+3sin(2x)",  f: x => x * x + 3 * Math.sin(2 * x), df: x => 2 * x + 6 * Math.cos(2*x), xmin: -4,   xmax: 4   }
+];
 
-  /* ============ ฟังก์ชันและอนุพันธ์ (เขียนมือ ไม่ใช้ numerical derivative) ============ */
+// slider 0..1 -> learning rate 0.001..2 แบบ log scale
+const LR_MIN = 0.001, LR_MAX = 2;
+function sliderToLr(t) {
+  return LR_MIN * Math.pow(LR_MAX / LR_MIN, t);
+}
+function lrToSlider(lr) {
+  return Math.log(lr / LR_MIN) / Math.log(LR_MAX / LR_MIN);
+}
 
-  var FUNCS = [
-    {
-      label: 'f(x) = x²',
-      dlabel: "f'(x) = 2x",
-      f:  function (x) { return x * x; },
-      df: function (x) { return 2 * x; },
-      xMin: -3, xMax: 3, start: 2.5
-    },
-    {
-      label: 'f(x) = x⁴ − 3x² + 1',
-      dlabel: "f'(x) = 4x³ − 6x",
-      f:  function (x) { return x * x * x * x - 3 * x * x + 1; },
-      df: function (x) { return 4 * x * x * x - 6 * x; },
-      // start = -1.9 ไม่ใช่ -2.0 เพราะ -2.0 + lr 0.1 กระโดดลงที่ x=0 พอดีเป๊ะ
-      // ซึ่งเป็น "จุดสูงสุดเฉพาะที่" ที่ความชันเป็น 0 → ค้างอยู่ตรงนั้นตั้งแต่รอบแรก
-      xMin: -2.2, xMax: 2.2, start: -1.9
-    },
-    {
-      label: 'f(x) = x² + 3·sin(2x)',
-      dlabel: "f'(x) = 2x + 6·cos(2x)",
-      f:  function (x) { return x * x + 3 * Math.sin(2 * x); },
-      df: function (x) { return 2 * x + 6 * Math.cos(2 * x); },
-      xMin: -4, xMax: 4, start: 3.2
-    }
-  ];
+// จุดที่ความชันเป็น 0 เรียกว่า "จุดวิกฤต" (stationary point) ซึ่งอาจเป็นจุดต่ำสุด
+// จุดสูงสุด หรือจุดอานม้าก็ได้ gradient descent แยกสามอย่างนี้ไม่ออกด้วยตัวเอง
+// จึงต้องชิมค่า f ทั้งสองข้างเพื่อจำแนกก่อนจะประกาศว่าเจอคำตอบ
+const GRAD_EPS  = 1e-7;   // ถือว่าความชันเป็นศูนย์
+const PROBE     = 1e-3;   // ระยะที่ชิมค่าซ้าย-ขวา
+const MAX_STEPS = 1000;   // เพดานจำนวนสเต็ปของโหมด Run
 
-  /* ============ สถานะ ============ */
+// ปัดทศนิยมแล้วกันไม่ให้ได้ "-0.0000" ซึ่งไม่มีความหมายทางคณิตศาสตร์
+// (เกิดเมื่อค่าจริงเป็นลบจิ๋ว ๆ เช่น -4.4e-8 แล้วถูกปัดขึ้นเป็นศูนย์)
+function fmt(v, digits) {
+  const rounded = Number(v.toFixed(digits));
+  return (rounded === 0 ? 0 : rounded).toFixed(digits);
+}
 
-  var fn      = FUNCS[0];
-  var yMin    = 0;
-  var yMax    = 1;
-  var x       = fn.start;
-  var iter    = 0;
-  var trail   = [];
-  var lr      = 0.1;
-  var running = false;
-  var rafId   = null;
-  var lastStep = 0;
-  var status  = null;      // null | 'diverged' | 'converged' | 'maxiter'
-  var dragging = false;
+function classifyStationary(fn, x) {
+  const f0 = fn.f(x), fL = fn.f(x - PROBE), fR = fn.f(x + PROBE);
+  if (fL > f0 && fR > f0) return "min";    // ต่ำกว่าทั้งสองข้าง = จุดต่ำสุดจริง
+  if (fL < f0 && fR < f0) return "max";    // สูงกว่าทั้งสองข้าง = จุดสูงสุด
+  return "saddle";                          // ข้างหนึ่งขึ้นข้างหนึ่งลง = จุดอานม้า
+}
 
-  var MAX_ITER  = 500;
-  var BLOW_UP   = 1e6;
-  var FLAT_GRAD = 1e-4;
-  var STEP_MS   = 100;     // ~10 รอบ/วินาที
+const state = {
+  fnIndex: 0,
+  lr: 0.1,
+  x0: -2.0,
+  x: -2.0,
+  steps: 0,
+  path: [],
+  running: false,
+  diverged: false,
+  settled: false,      // ถึงจุดต่ำสุดแล้ว ไม่ต้องเดินต่อ
+  status: "",
+  reason: ""
+};
 
-  /* ============ DOM ============ */
+function currentFn() { return FUNCS[state.fnIndex]; }
 
-  var canvas   = document.getElementById('plot');
-  var ctx      = canvas.getContext('2d');
-  var wrapEl   = canvas.parentElement;
-  var banner   = document.getElementById('banner');
-  var fnSelect = document.getElementById('fnSelect');
-  var lrSlider = document.getElementById('lrSlider');
-  var lrVal    = document.getElementById('lrVal');
-  var btnStep  = document.getElementById('btnStep');
-  var btnRun   = document.getElementById('btnRun');
-  var btnReset = document.getElementById('btnReset');
-  var presets  = Array.prototype.slice.call(document.querySelectorAll('.preset'));
-  var sIter    = document.getElementById('sIter');
-  var sX       = document.getElementById('sX');
-  var sFx      = document.getElementById('sFx');
-  var sDfx     = document.getElementById('sDfx');
+// เดินหน้า 1 สเต็ป: x_new = x_old - lr * f'(x_old)
+function stepOnce() {
+  // ถึงคำตอบแล้วหรือลู่ออกแล้วก็ไม่ต้องเดินต่อ ไม่งั้นตัวนับสเต็ปจะพองขึ้นเรื่อย ๆ
+  // ทั้งที่ค่า x ไม่ได้ขยับจริง ซึ่งทำให้ตัวเลขที่แอปนี้ตั้งใจจะสอนเชื่อถือไม่ได้
+  if (state.diverged || state.settled) return;
+  const fn = currentFn();
+  const prev = state.x;
+  const grad = fn.df(state.x);
+  const next = state.x - state.lr * grad;
 
-  var W = 0, H = 0;                                  // ขนาดเป็น CSS pixel
-  var PAD = { l: 46, r: 14, t: 16, b: 30 };
-
-  /* ============ ตัวช่วยจัดรูปแบบตัวเลข ============ */
-
-  function fmt(v) {
-    if (typeof v !== 'number' || Number.isNaN(v)) return 'NaN';
-    if (!isFinite(v)) return v > 0 ? '∞' : '−∞';
-    if (Math.abs(v) >= 1e5) return v.toExponential(2);
-    return v.toFixed(4);
+  if (!isFinite(next)) {
+    state.diverged = true;
+    state.running = false;
+    state.reason = "ค่ากลายเป็น Infinity หรือ NaN";
+    state.status = "";   // ล้างข้อความเดิม ไม่ให้โชว์คู่กับคำเตือนจนขัดแย้งกันเอง
+    return;
   }
 
-  function fmtLr(v) {
-    return v < 0.01 ? v.toFixed(4) : v.toFixed(3);
+  state.x = next;
+  state.steps++;
+  state.path.push(next);
+
+  // ลู่ออก: ออกนอกกรอบกราฟแล้วและก้าวถัดไปยิ่งไกลกว่าเดิม
+  // ไม่ต้องรอให้ถึง 1e6 เพราะกว่าจะถึงลูกบอลก็หายจากจอไปนานแล้ว
+  if ((next < fn.xmin || next > fn.xmax) && Math.abs(next) > Math.abs(prev)) {
+    state.diverged = true;
+    state.running = false;
+    state.reason = "x = " + next.toFixed(2) + " หลุดออกนอกกรอบกราฟ (" +
+                   fn.xmin + " ถึง " + fn.xmax + ") และก้าวถัดไปยิ่งไกลกว่าเดิม";
+    state.status = "";
+    return;
   }
 
-  function tickLabel(v, step) {
-    var dec = Math.max(0, Math.min(4, -Math.floor(Math.log10(step) + 1e-9)));
-    var s = v.toFixed(dec);
-    if (/^-0(\.0*)?$/.test(s)) s = s.slice(1);
-    return s;
-  }
-
-  function niceStep(range, target) {
-    var raw = range / target;
-    if (!(raw > 0) || !isFinite(raw)) return 1;
-    var mag  = Math.pow(10, Math.floor(Math.log10(raw)));
-    var norm = raw / mag;
-    var s;
-    if (norm < 1.5)      s = 1;
-    else if (norm < 3)   s = 2;
-    else if (norm < 7)   s = 5;
-    else                 s = 10;
-    return s * mag;
-  }
-
-  /* ============ ช่วงแกน y — sample 400 จุด เผื่อขอบ 10% ============ */
-
-  function computeYRange(fo) {
-    var N = 400, lo = Infinity, hi = -Infinity, i, xx, yy;
-    for (i = 0; i <= N; i++) {
-      xx = fo.xMin + (fo.xMax - fo.xMin) * i / N;
-      yy = fo.f(xx);
-      if (!isFinite(yy)) continue;
-      if (yy < lo) lo = yy;
-      if (yy > hi) hi = yy;
-    }
-    if (!isFinite(lo) || !isFinite(hi)) { lo = -1; hi = 1; }
-    var pad = (hi - lo) * 0.1;
-    if (!(pad > 0)) pad = 1;
-    return { yMin: lo - pad, yMax: hi + pad };
-  }
-
-  /* ============ แปลงพิกัด (คณิตศาสตร์ ↔ หน้าจอ) ============ */
-
-  function toPx(xv) {
-    return PAD.l + (xv - fn.xMin) / (fn.xMax - fn.xMin) * (W - PAD.l - PAD.r);
-  }
-
-  function toPy(yv) {
-    // แกน y ของ canvas ชี้ลง แต่ของคณิตศาสตร์ชี้ขึ้น → ต้องกลับด้าน
-    return H - PAD.b - (yv - yMin) / (yMax - yMin) * (H - PAD.t - PAD.b);
-  }
-
-  function fromPx(px) {
-    return fn.xMin + (px - PAD.l) / (W - PAD.l - PAD.r) * (fn.xMax - fn.xMin);
-  }
-
-  /* ============ ปรับขนาด canvas ตาม devicePixelRatio ============ */
-
-  function resizeCanvas() {
-    var rect = wrapEl.getBoundingClientRect();
-    var dpr  = window.devicePixelRatio || 1;
-    W = Math.max(1, Math.floor(rect.width));
-    H = Math.max(1, Math.floor(rect.height));
-    canvas.width  = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    canvas.style.width  = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // set ไม่ใช่ scale → ไม่สะสมทับกันตอน resize ซ้ำ
-    draw();
-  }
-
-  /* ============ วาด ============ */
-
-  function draw() {
-    if (!W || !H) return;
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0e1420';
-    ctx.fillRect(0, 0, W, H);
-
-    drawGrid();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(PAD.l, PAD.t, W - PAD.l - PAD.r, H - PAD.t - PAD.b);
-    ctx.clip();
-
-    drawCurve();
-    drawTrail();
-    drawTangent();
-    drawBall();
-
-    ctx.restore();
-  }
-
-  function drawGrid() {
-    var plotW = W - PAD.l - PAD.r;
-    var plotH = H - PAD.t - PAD.b;
-    var i, v, px, py;
-
-    var xStep = niceStep(fn.xMax - fn.xMin, Math.max(3, Math.floor(plotW / 78)));
-    var yStep = niceStep(yMax - yMin,       Math.max(3, Math.floor(plotH / 46)));
-
-    ctx.lineWidth = 1;
-    ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--font-mono');
-    ctx.fillStyle = '#6b788f';
-
-    // เส้นตั้ง
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    for (i = Math.ceil(fn.xMin / xStep); i * xStep <= fn.xMax + 1e-9; i++) {
-      v = i * xStep;
-      px = toPx(v);
-      ctx.beginPath();
-      ctx.moveTo(px, PAD.t);
-      ctx.lineTo(px, H - PAD.b);
-      ctx.strokeStyle = Math.abs(v) < 1e-9 ? 'rgba(120,140,175,.42)' : 'rgba(120,140,175,.13)';
-      ctx.stroke();
-      ctx.fillText(tickLabel(v, xStep), px, H - PAD.b + 6);
-    }
-
-    // เส้นนอน
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (i = Math.ceil(yMin / yStep); i * yStep <= yMax + 1e-9; i++) {
-      v = i * yStep;
-      py = toPy(v);
-      ctx.beginPath();
-      ctx.moveTo(PAD.l, py);
-      ctx.lineTo(W - PAD.r, py);
-      ctx.strokeStyle = Math.abs(v) < 1e-9 ? 'rgba(120,140,175,.42)' : 'rgba(120,140,175,.13)';
-      ctx.stroke();
-      ctx.fillText(tickLabel(v, yStep), PAD.l - 7, py);
-    }
-
-    // กรอบ
-    ctx.strokeStyle = 'rgba(120,140,175,.28)';
-    ctx.strokeRect(PAD.l + .5, PAD.t + .5, plotW - 1, plotH - 1);
-  }
-
-  function drawCurve() {
-    var steps = Math.max(240, Math.floor(W - PAD.l - PAD.r));
-    var started = false, i, xv, yv;
-
-    ctx.beginPath();
-    for (i = 0; i <= steps; i++) {
-      xv = fn.xMin + (fn.xMax - fn.xMin) * i / steps;
-      yv = fn.f(xv);
-      if (!isFinite(yv)) { started = false; continue; }
-      if (!started) { ctx.moveTo(toPx(xv), toPy(yv)); started = true; }
-      else          { ctx.lineTo(toPx(xv), toPy(yv)); }
-    }
-    ctx.strokeStyle = '#4da3ff';
-    ctx.lineWidth   = 2.5;
-    ctx.lineJoin    = 'round';
-    ctx.lineCap     = 'round';
-    ctx.stroke();
-  }
-
-  function drawTrail() {
-    if (!trail.length) return;
-    var i, t, started = false, a, n = trail.length;
-
-    ctx.beginPath();
-    for (i = 0; i < n; i++) {
-      t = trail[i];
-      if (!isFinite(t.x) || !isFinite(t.y)) { started = false; continue; }
-      if (!started) { ctx.moveTo(toPx(t.x), toPy(t.y)); started = true; }
-      else          { ctx.lineTo(toPx(t.x), toPy(t.y)); }
-    }
-    ctx.strokeStyle = 'rgba(255,180,84,.45)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    for (i = 0; i < n; i++) {
-      t = trail[i];
-      if (!isFinite(t.x) || !isFinite(t.y)) continue;
-      a = 0.18 + 0.6 * (n > 1 ? i / (n - 1) : 1);
-      ctx.beginPath();
-      ctx.arc(toPx(t.x), toPy(t.y), 3, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,180,84,' + a.toFixed(3) + ')';
-      ctx.fill();
-    }
-  }
-
-  function drawTangent() {
-    if (!isFinite(x)) return;
-    var y0 = fn.f(x), g = fn.df(x);
-    if (!isFinite(y0) || !isFinite(g)) return;
-
-    var dx = (fn.xMax - fn.xMin) * 0.13;
-    var x1 = x - dx, x2 = x + dx;
-
-    ctx.beginPath();
-    ctx.moveTo(toPx(x1), toPy(y0 + g * (x1 - x)));
-    ctx.lineTo(toPx(x2), toPy(y0 + g * (x2 - x)));
-    ctx.strokeStyle = 'rgba(120,255,190,.8)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-
-  function drawBall() {
-    var inView = isFinite(x) && x >= fn.xMin && x <= fn.xMax;
-
-    if (inView) {
-      var y0 = fn.f(x);
-      if (!isFinite(y0)) return;
-      var px = toPx(x), py = toPy(y0);
-
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px, H - PAD.b);
-      ctx.strokeStyle = 'rgba(255,90,120,.35)';
-      ctx.setLineDash([3, 3]);
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.beginPath();
-      ctx.arc(px, py, 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#ff5a78';
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#fff';
-      ctx.stroke();
-      return;
-    }
-
-    // หลุดออกนอกจอ → วาดติดขอบพร้อมลูกศรชี้ทิศ
-    var dir;
-    if (isFinite(x))            dir = x > fn.xMax ? 1 : -1;
-    else if (x === -Infinity)   dir = -1;
-    else                        dir = 1;             // +Infinity หรือ NaN
-
-    var bx = dir > 0 ? toPx(fn.xMax) - 15 : toPx(fn.xMin) + 15;
-    var by = PAD.t + (H - PAD.t - PAD.b) * 0.45;
-
-    ctx.beginPath();
-    ctx.arc(bx, by, 8, 0, Math.PI * 2);
-    ctx.fillStyle = '#ff5a78';
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#fff';
-    ctx.stroke();
-
-    var ax = bx + dir * 15;
-    ctx.beginPath();
-    ctx.moveTo(ax, by - 9);
-    ctx.lineTo(ax + dir * 13, by);
-    ctx.lineTo(ax, by + 9);
-    ctx.closePath();
-    ctx.fillStyle = '#ff5a78';
-    ctx.fill();
-
-    ctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--font-mono');
-    ctx.fillStyle = '#ffa6b6';
-    ctx.textAlign = dir > 0 ? 'right' : 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('x = ' + fmt(x), bx + dir * -12, by + 14);
-  }
-
-  /* ============ อัลกอริทึม ============ */
-
-  function evaluateStatus() {
-    if (!isFinite(x) || Math.abs(x) > BLOW_UP) { status = 'diverged'; return; }
-    var g = fn.df(x);
-    if (isFinite(g) && Math.abs(g) < FLAT_GRAD) { status = 'converged'; return; }
-    if (iter >= MAX_ITER) { status = 'maxiter'; }
-  }
-
-  // ความชันเป็น 0 ไม่ได้แปลว่าเป็นจุดต่ำสุดเสมอไป — อาจเป็นจุดสูงสุดหรือจุดอานม้าก็ได้
-  // ไม่มี f'' ให้ใช้ เลยเช็คด้วยการชิมค่า f สองข้างแทน
-  function isMinimumAt(xv) {
-    var h  = (fn.xMax - fn.xMin) * 5e-3;
-    var y0 = fn.f(xv), yl = fn.f(xv - h), yr = fn.f(xv + h);
-    if (!isFinite(y0) || !isFinite(yl) || !isFinite(yr)) return true;
-    var eps = Math.max(1e-12, Math.abs(y0) * 1e-9);
-    return yl >= y0 - eps && yr >= y0 - eps;
-  }
-
-  function stepOnce() {
-    if (status) return false;
-
-    var g = fn.df(x);
-    if (!isFinite(x) || !isFinite(g)) { status = 'diverged'; return false; }
-
-    trail.push({ x: x, y: fn.f(x) });
-    if (trail.length > 600) trail.shift();
-
-    x = x - lr * g;          // ← หัวใจของ gradient descent
-    iter++;
-
-    evaluateStatus();
-    return !status;
-  }
-
-  function doStep() {
-    if (status) return;
-    stepOnce();
-    draw();
-    updateUI();
-  }
-
-  function loop(ts) {
-    if (!running) return;
-    if (ts - lastStep >= STEP_MS) {
-      lastStep = ts;
-      var ok = stepOnce();
-      draw();
-      updateUI();
-      if (!ok) { stopRun(); return; }
-    }
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function startRun() {
-    if (running || status) return;
-    running = true;
-    lastStep = 0;
-    rafId = requestAnimationFrame(loop);
-    updateUI();
-  }
-
-  function stopRun() {
-    running = false;
-    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
-    updateUI();
-  }
-
-  function reset() {
-    stopRun();
-    x = fn.start;
-    iter = 0;
-    trail = [];
-    status = null;
-    draw();
-    updateUI();
-  }
-
-  function moveStartTo(xv) {
-    stopRun();
-    x = Math.min(fn.xMax, Math.max(fn.xMin, xv));
-    iter = 0;
-    trail = [];
-    status = null;
-    draw();
-    updateUI();
-  }
-
-  /* ============ UI ============ */
-
-  function updateBanner() {
-    var cls = '', html = '';
-
-    if (status === 'converged') {
-      if (isMinimumAt(x)) {
-        cls  = 'good';
-        html = '✓ ลู่เข้าแล้ว — ความชันเกือบเป็นศูนย์ ถือว่าเจอจุดต่ำสุด' +
-               '<span class="hint">x ≈ ' + fmt(x) + ' · ใช้ไป ' + iter + ' รอบ · กด Reset เพื่อเริ่มใหม่</span>';
-      } else {
-        cls  = 'warn';
-        html = '⚠️ ติดอยู่ที่จุดวิกฤต แต่<b>ไม่ใช่จุดต่ำสุด</b>' +
-               '<span class="hint">ที่ x ≈ ' + fmt(x) + ' ความชันเป็น 0 พอดี gradient descent เลยไม่รู้จะเดินไปทางไหน ' +
-               'ทั้งที่จริงมันเป็นยอดเนิน ไม่ใช่ก้นหลุม — ลองลากจุดเริ่มต้นไปที่อื่นแล้วเริ่มใหม่</span>';
-      }
-    } else if (status === 'diverged') {
-      cls  = 'bad';
-      html = '⚠️ ลู่ออก (diverge) — learning rate ใหญ่เกินไป' +
-             '<span class="hint">ก้าวยาวเกินจนกระโดดข้ามจุดต่ำสุดแล้วเหวี่ยงออกไกลขึ้นเรื่อย ๆ ลองลด lr ลงแล้วกด Reset</span>';
-    } else if (status === 'maxiter') {
-      cls  = 'warn';
-      html = '⏱ ครบ ' + MAX_ITER + ' รอบแล้ว แต่ยังไม่ถึงจุดต่ำสุด' +
-             '<span class="hint">learning rate เล็กเกินไป ก้าวสั้นมากจนช้า ลองเพิ่ม lr แล้วกด Reset</span>';
-    } else if (isFinite(x) && (x < fn.xMin || x > fn.xMax)) {
-      cls  = 'bad';
-      html = '⚠️ ลู่ออก (diverge) — learning rate ใหญ่เกินไป' +
-             '<span class="hint">ตอนนี้ x = ' + fmt(x) + ' หลุดออกนอกกราฟไปแล้ว</span>';
-    }
-
-    if (cls) {
-      banner.className = 'show ' + cls;
-      banner.innerHTML = html;
+  // ความชันเกือบศูนย์ = ถึงจุดวิกฤต แต่ยังไม่รู้ว่าเป็นจุดต่ำสุดหรือเปล่า ต้องจำแนกก่อน
+  if (Math.abs(fn.df(state.x)) < GRAD_EPS) {
+    const kind = classifyStationary(fn, state.x);
+    if (kind === "min") {
+      state.running = false;
+      state.settled = true;
+      state.status = "พบจุดต่ำสุด: x = " + fmt(state.x, 4) + ", f(x) = " + fmt(fn.f(state.x), 4);
     } else {
-      banner.className = '';
-      banner.innerHTML = '';
+      // ความชันเป็นศูนย์แต่ไม่ใช่คำตอบ สะกิดออกไปทางที่ค่า f ต่ำกว่าแล้วเดินต่อ
+      const goLeft = fn.f(state.x - PROBE) < fn.f(state.x + PROBE);
+      state.x += goLeft ? -PROBE : PROBE;
+      // การสะกิดเป็นส่วนหนึ่งของก้าวเดิม ไม่ใช่ก้าวใหม่ จึงเขียนทับจุดล่าสุด
+      // ไม่ใช่ push เพิ่ม ไม่งั้น path จะยาวเกินจำนวนสเต็ปจริง
+      state.path[state.path.length - 1] = state.x;
+      state.status = (kind === "max" ? "จุดสูงสุดเฉพาะที่" : "จุดอานม้า") +
+        " (ความชัน = 0 แต่ไม่ใช่จุดต่ำสุด) กำลังเดินต่อ";
     }
+  } else if (state.steps >= MAX_STEPS) {
+    // ยังไม่ถึงจุดต่ำสุดแต่เดินครบเพดานแล้ว — บอกผู้ใช้แทนที่จะวิ่งไปเรื่อย ๆ
+    state.running = false;
+    state.status = "เดินครบ " + MAX_STEPS + " สเต็ปแล้วยังไม่ถึงจุดต่ำสุด (ความชันยังเป็น " +
+                   fn.df(state.x).toExponential(2) + ") — learning rate เล็กเกินไป";
+  } else if (state.running) {
+    state.status = "กำลังเดิน... สเต็ปที่ " + state.steps + "  ความชัน = " + grad.toExponential(2);
+  } else {
+    state.status = "";
   }
+}
 
-  function updateUI() {
-    sIter.textContent = String(iter);
-    sX.textContent    = fmt(x);
-    sFx.textContent   = isFinite(x) ? fmt(fn.f(x))  : fmt(NaN);
-    sDfx.textContent  = isFinite(x) ? fmt(fn.df(x)) : fmt(NaN);
+// จุดเริ่มต้นต้องอยู่ในช่วง x ที่วาดอยู่เสมอ ไม่งั้นลูกบอลถูกวาดนอกจอ
+// และ Reset ก็กู้ไม่ได้ เพราะ reset() ดึงค่ากลับไปที่ x0 ตัวที่หลุดขอบอยู่ดี
+function clampStart() {
+  const fn = currentFn();
+  state.x0 = Math.max(fn.xmin, Math.min(fn.xmax, state.x0));
+}
 
-    btnRun.textContent = running ? 'Pause' : 'Run';
-    btnStep.disabled   = !!status || running;
-    btnRun.disabled    = !!status;
+function reset() {
+  clampStart();
+  state.x = state.x0;
+  state.steps = 0;
+  state.path = [state.x0];
+  state.running = false;
+  state.diverged = false;
+  state.settled = false;
+  state.status = "";
+  state.reason = "";
+}
 
-    presets.forEach(function (b) {
-      var v = parseFloat(b.getAttribute('data-lr'));
-      b.classList.toggle('active', Math.abs(v - lr) < 1e-9);
-    });
+// ---------- การวาด (render) ----------
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0;
 
-    updateBanner();
+function resize() {
+  const cssW = cv.clientWidth;
+  const cssH = Math.max(260, Math.round(cssW * 0.5));
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.height = cssH + "px";
+  cv.width  = Math.round(cssW * dpr);
+  cv.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  W = cssW; H = cssH;
+  draw();
+}
+
+// แปลงพิกัดคณิตศาสตร์ -> พิกัด canvas (แกน y ของ canvas ชี้ลง จึงต้องกลับด้าน)
+function view() {
+  const fn = currentFn();
+  const xmin = fn.xmin, xmax = fn.xmax;
+  let ymin = Infinity, ymax = -Infinity;
+  for (let i = 0; i <= 200; i++) {
+    const x = xmin + (xmax - xmin) * i / 200;
+    const y = fn.f(x);
+    if (y < ymin) ymin = y;
+    if (y > ymax) ymax = y;
   }
+  const pad = (ymax - ymin) * 0.15 || 1;
+  return { xmin, xmax, ymin: ymin - pad, ymax: ymax + pad };
+}
 
-  function setLr(v) {
-    lr = v;
-    lrSlider.value = String(Math.log10(v));
-    lrVal.textContent = fmtLr(lr);
-    updateUI();
+function toPx(v, x, y) {
+  return [
+    (x - v.xmin) / (v.xmax - v.xmin) * W,
+    H - (y - v.ymin) / (v.ymax - v.ymin) * H
+  ];
+}
+function pxToMathX(v, px) {
+  return v.xmin + px / W * (v.xmax - v.xmin);
+}
+
+function draw() {
+  const fn = currentFn();
+  const v = view();
+  ctx.clearRect(0, 0, W, H);
+
+  // แกน
+  ctx.strokeStyle = "#30363d";
+  ctx.lineWidth = 1;
+  const origin = toPx(v, 0, 0);
+  ctx.beginPath();
+  ctx.moveTo(0, origin[1]); ctx.lineTo(W, origin[1]);
+  ctx.moveTo(origin[0], 0); ctx.lineTo(origin[0], H);
+  ctx.stroke();
+
+  // เส้นโค้งของฟังก์ชัน
+  ctx.strokeStyle = "#58a6ff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 400; i++) {
+    const x = v.xmin + (v.xmax - v.xmin) * i / 400;
+    const p = toPx(v, x, fn.f(x));
+    if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
   }
+  ctx.stroke();
 
-  function selectFunction(idx) {
-    fn = FUNCS[idx];
-    var r = computeYRange(fn);
-    yMin = r.yMin;
-    yMax = r.yMax;
+  // เส้นทางที่เดินผ่านมา
+  ctx.strokeStyle = "#d29922";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  state.path.forEach((x, i) => {
+    const p = toPx(v, x, fn.f(x));
+    if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+  });
+  ctx.stroke();
+  ctx.fillStyle = "#d29922";
+  state.path.forEach(x => {
+    const p = toPx(v, x, fn.f(x));
+    ctx.beginPath(); ctx.arc(p[0], p[1], 2.5, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // เส้นสัมผัสที่จุดปัจจุบัน
+  const slope = fn.df(state.x);
+  const half = (v.xmax - v.xmin) * 0.18;
+  const xa = state.x - half, xb = state.x + half;
+  const ya = fn.f(state.x) + slope * (xa - state.x);
+  const yb = fn.f(state.x) + slope * (xb - state.x);
+  ctx.strokeStyle = "#3fb950";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const a = toPx(v, xa, ya);
+  const b = toPx(v, xb, yb);
+  ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+  ctx.stroke();
+
+  // ลูกบอล
+  const c = toPx(v, state.x, fn.f(state.x));
+  ctx.fillStyle = "#f78166";
+  ctx.beginPath(); ctx.arc(c[0], c[1], 7, 0, Math.PI * 2); ctx.fill();
+
+  updateReadout();
+}
+
+function updateReadout() {
+  const fn = currentFn();
+  document.getElementById("rx").textContent  = fmt(state.x, 3);
+  document.getElementById("rfx").textContent = fmt(fn.f(state.x), 3);
+  // lr ต่ำ ๆ ต้องการทศนิยมมากกว่า ไม่งั้น 0.001 กับ 0.009 อ่านออกมาเหมือนกันหมด
+  document.getElementById("rlr").textContent =
+    state.lr < 0.01 ? state.lr.toFixed(5) : state.lr.toFixed(3);
+  document.getElementById("rn").textContent  = state.steps;
+  const warn = document.getElementById("warn");
+  warn.textContent = "ค่าลู่ออก (diverged) — learning rate ใหญ่เกินไป" +
+                     (state.reason ? ": " + state.reason : "") + " กด Reset แล้วลองค่าน้อยลง";
+  warn.classList.toggle("show", state.diverged);
+  const note = document.getElementById("note");
+  note.textContent = state.status;
+  note.classList.toggle("show", state.status !== "");
+}
+
+// ---------- การจัดการ event ----------
+document.querySelectorAll('input[name=fn]').forEach(el => {
+  el.addEventListener("change", () => {
+    state.fnIndex = parseInt(el.value, 10);
     reset();
-  }
-
-  /* ============ ผูก event ============ */
-
-  FUNCS.forEach(function (fo, i) {
-    var o = document.createElement('option');
-    o.value = String(i);
-    o.textContent = fo.label + '    ·    ' + fo.dlabel;
-    fnSelect.appendChild(o);
+    draw();
   });
+});
 
-  fnSelect.addEventListener('change', function () {
-    selectFunction(parseInt(fnSelect.value, 10) || 0);
+const lrSlider = document.getElementById("lr");
+lrSlider.value = lrToSlider(state.lr);
+lrSlider.addEventListener("input", () => {
+  state.lr = sliderToLr(parseFloat(lrSlider.value));
+  updateReadout();
+});
+
+document.querySelectorAll("button[data-lr]").forEach(b => {
+  b.addEventListener("click", () => {
+    state.lr = parseFloat(b.dataset.lr);
+    lrSlider.value = lrToSlider(state.lr);
+    reset();
+    draw();
   });
+});
 
-  lrSlider.addEventListener('input', function () {
-    lr = Math.pow(10, parseFloat(lrSlider.value));
-    lrVal.textContent = fmtLr(lr);
-    updateUI();
-  });
+document.getElementById("bStep").addEventListener("click", () => { stepOnce(); draw(); });
+document.getElementById("bReset").addEventListener("click", () => { reset(); draw(); });
 
-  presets.forEach(function (b) {
-    b.addEventListener('click', function () {
-      setLr(parseFloat(b.getAttribute('data-lr')));
-    });
-  });
+const runBtn = document.getElementById("bRun");
+runBtn.addEventListener("click", () => {
+  // ลู่ออกหรือถึงคำตอบแล้ว กด Run ไม่ควรทำอะไร ไม่งั้นปุ่มค้างที่ "Pause" ตลอดไป
+  if (state.diverged || state.settled) return;
+  state.running = !state.running;
+  runBtn.textContent = state.running ? "Pause" : "Run";
+});
 
-  btnStep.addEventListener('click', doStep);
+function loop() {
+  if (state.running) { stepOnce(); draw(); }
+  if (!state.running) runBtn.textContent = "Run";
+  requestAnimationFrame(loop);
+}
+loop();
 
-  btnRun.addEventListener('click', function () {
-    if (running) stopRun();
-    else startRun();
-  });
+// ลากบน canvas เพื่อย้ายจุดเริ่มต้น
+let dragging = false;
+function setStartFromEvent(e) {
+  const rect = cv.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const v = view();
+  state.x0 = Math.max(v.xmin, Math.min(v.xmax, pxToMathX(v, px)));
+  reset();
+  draw();
+}
+cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); setStartFromEvent(e); });
+cv.addEventListener("pointermove", e => { if (dragging) setStartFromEvent(e); });
+cv.addEventListener("pointerup",   e => { dragging = false; });
 
-  btnReset.addEventListener('click', reset);
+// คีย์บอร์ด
+window.addEventListener("keydown", e => {
+  // ตัวควบคุมที่โฟกัสอยู่ต้องได้จัดการคีย์ของตัวเองก่อนเสมอ
+  // ถ้าไม่กันไว้ ลูกศรจะถูกแย่งไปจาก slider และ radio จนใช้คีย์บอร์ดปรับค่าไม่ได้เลย
+  const tag = e.target && e.target.tagName;
+  if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA") return;
 
-  // คลิก/ลากบนกราฟ (pointer event ครอบคลุมทั้งเมาส์และนิ้ว)
-  function pointerToX(e) {
-    var rect = canvas.getBoundingClientRect();
-    return fromPx(e.clientX - rect.left);
-  }
+  // ไม่แตะคีย์ลัดของเบราว์เซอร์ (Ctrl+R ฯลฯ)
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-  canvas.addEventListener('pointerdown', function (e) {
-    dragging = true;
-    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
-    moveStartTo(pointerToX(e));
-  });
+  const v = view();
+  const nudge = (v.xmax - v.xmin) / 100;
+  if (e.key === "ArrowLeft")  { state.x0 -= nudge; reset(); draw(); e.preventDefault(); }
+  if (e.key === "ArrowRight") { state.x0 += nudge; reset(); draw(); e.preventDefault(); }
+  if (e.key === " ")          { stepOnce(); draw(); e.preventDefault(); }
+  if (e.key === "r" || e.key === "R") { reset(); draw(); }
+});
 
-  canvas.addEventListener('pointermove', function (e) {
-    if (dragging) moveStartTo(pointerToX(e));
-  });
-
-  function endDrag(e) {
-    dragging = false;
-    try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
-  }
-
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', endDrag);
-
-  // คีย์ลัด
-  window.addEventListener('keydown', function (e) {
-    var tag = (e.target && e.target.tagName || '').toLowerCase();
-    if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
-
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      moveStartTo((isFinite(x) ? x : fn.start) - 0.05);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      moveStartTo((isFinite(x) ? x : fn.start) + 0.05);
-    } else if (e.key === ' ' || e.key === 'Spacebar') {
-      e.preventDefault();
-      doStep();
-    } else if (e.key === 'r' || e.key === 'R') {
-      e.preventDefault();
-      reset();
-    }
-  });
-
-  // ปรับขนาดตามคอนเทนเนอร์
-  if (typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(resizeCanvas).observe(wrapEl);
-  }
-  window.addEventListener('resize', resizeCanvas);
-
-  /* ============ เริ่มต้น ============ */
-
-  fnSelect.value = '0';
-  selectFunction(0);
-  setLr(0.1);
-  resizeCanvas();
-})();
+window.addEventListener("resize", resize);
+reset();
+resize();
 </script>
 </body>
 </html>
